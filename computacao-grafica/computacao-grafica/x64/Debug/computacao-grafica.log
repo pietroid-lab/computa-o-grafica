@@ -1,4 +1,2 @@
 ﻿  Main.cpp
-C:\Users\pietro.pchenriques\Documents\grafic-computation\computacao-grafica\packages\unofficial-flayan-glew.2.1.0\build\native\include\GL\glxew.h(98,10): error C1083: Não é possível abrir arquivo incluir: 'X11/Xlib.h': No such file or directory
-  (compilando o arquivo fonte 'Main.cpp')
-  
+LINK : fatal error LNK1168: não foi possível abrir C:\Users\pietro.pchenriques\Documents\computa-o-grafica\computacao-grafica\x64\Debug\computacao-grafica.exe para escrita

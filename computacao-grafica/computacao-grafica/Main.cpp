@@ -1,9 +1,10 @@
 #include <iostream>
 #include <GL/glew.h>
 #include <GLFW//glfw3.h>
-#include <cstdlib> // For rand() and srand()
-#include <ctime>   // For time()
-#include <time.h>       /* time_t, struct tm, difftime, time, mktime */
+
+#include <glm\glm.hpp>
+#include <glm\gtc\matrix_transform.hpp>
+#include <glm\gtc\type_ptr.hpp>
 
 using namespace std;
 
@@ -14,32 +15,31 @@ const GLint WIDTH = 800, HEIGHT = 600;
 // todo programa pode ser chamado de shader
 GLuint VAO, VBO, shaderProgram;
 
+float toRadians = 3.1415f / 180.0f;
+
+bool direction = false, directionSize = false;
+float triOffset = 0.0f, triOffsetMax = 0.7f, triOffsetMin = -0.7f, triIncrement = 0.03f;
+float triOffsetSize = 0.2f, triOffsetSizeMax = 1.2f, triOffsetSizeMin = 0.2f, triOffsetSizeIncrement = 0.03f;
+float triCurrentAngle = 0.0f, triAngleIncrement = 6.0f;
+
 // aqui estamos fazendo um programa (shader) em GLSL
 
 // shader para renderizar pontos na tela
 static const char* vertexShader = "                                                        \n\
 #version 330                                                                               \n\
-                                                                                           \n\
-                                                                                           \n\
-// passando um argumento para o inicio do programa (args do C//                            \n\
-// estou passando um argumento de entrada na primeira posiçâo                              \n\
-// esse argumento deve ser um vetor de duas posições                                       \n\
 layout(location=0) in vec2 pos;                                                            \n\
+uniform mat4 model;                                                                        \n\
                                                                                            \n\
 void main() {                                                                              \n\
-	gl_Position = vec4(pos.x, pos.y, 0.0, 1.0);                                            \n\
+	gl_Position = model * vec4(pos.x, pos.y, 0.0, 1.0);                                    \n\
 }                                                                                          \n\
 ";
-
-// fragment pode ser lido como "a partir desse ponto o que faço com ele?"
-// shader para atribuir cores aos pontos
 
 static const char* fragmentShader = "                                                      \n\
 #version 330                                                                               \n\
                                                                                            \n\
-// diferente da entrada por layout, uniform é uma entrada em tempo de execução             \n\
-uniform vec3 triColor;																	   \n\
-out vec4 color;																			   \n\
+uniform vec3 triColor;																       \n\
+out vec4 color;                                                                            \n\
                                                                                            \n\
 void main() {                                                                              \n\
 	color = vec4(triColor, 1.0);                                                           \n\
@@ -83,6 +83,7 @@ void add_shader(GLuint program, const char* shaderCode, GLenum type) {
 	code[0] = shaderCode;
 	glShaderSource(_shader, 1, code, NULL);
 	glCompileShader(_shader);
+
 
 	// tratar os erros
 
@@ -144,33 +145,53 @@ int main() {
 
 	glViewport(0, 0, bufferWidth, bufferHeight);
 
-	time_t timer;
-
 	create_triangle();
 	add_program();
 
 	while (!glfwWindowShouldClose(window)) {
-
-		// cor de fundo da janela
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		//Cor de fundo da janela
+		glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
 		glfwPollEvents();
 		glClear(GL_COLOR_BUFFER_BIT);
 
-		// alterar a cor do triangulo
-		GLint uniform_color = glGetUniformLocation(shaderProgram, "triColor");
-		// float r = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-		// float g = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-		// float b = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-		glUniform3f(uniform_color, 1.0f, 1.0f, 0.0f);
+		//Altera cor do triangulo
+		GLint uniformColor = glGetUniformLocation(shaderProgram, "triColor");
+		glUniform3f(uniformColor, 1.0f, 1.0f, 0.0f);
 
-		// desenhando o triangulo
-		glUseProgram(shaderProgram); // programa que queremos desenhar
+		//Movimenta o triangulo
+		if (!direction)
+			triOffset += triIncrement;
+		else
+			triOffset -= triIncrement;
+		if (triOffset > triOffsetMax || triOffset < triOffsetMin)
+			direction = !direction;
+
+		triCurrentAngle += triAngleIncrement;
+		if (triCurrentAngle >= 360)
+			triCurrentAngle = 0;
+
+		if (!directionSize)
+			triOffsetSize += triOffsetSizeIncrement;
+		else
+			triOffsetSize -= triOffsetSizeIncrement;
+		if (triOffsetSize > triOffsetSizeMax || triOffsetSize < triOffsetSizeMin)
+			directionSize = !directionSize;
+
+		GLint uniformModel = glGetUniformLocation(shaderProgram, "model");
+		glm::mat4 model(1.0f);
+
+		model = glm::translate(model, glm::vec3(triOffset, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(triOffsetSize, triOffsetSize, 0.0f));
+		model = glm::rotate(model, triCurrentAngle * toRadians, glm::vec3(0.0f, 0.0f, 1.0f));
+
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+
+
+		//Desenhando o triangulo
+		glUseProgram(shaderProgram);
 		glBindVertexArray(VAO);
-
-		// estamos usando o VAO
-		glDrawArrays(GL_TRIANGLES, 0, 3); // trinagulo começando na posição 0 do VAO, e o número de pontos são 3
+		glDrawArrays(GL_TRIANGLES, 0, 3); //Tringulo, começando na posição 0, Numero de pontos 3
 		glBindVertexArray(0);
-		// não estamos mais usando o VAO
 
 		glfwSwapBuffers(window);
 	}
